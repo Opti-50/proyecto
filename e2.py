@@ -236,13 +236,6 @@ m.addConstrs(
     name="R15"
 )
 
-
-# m.addConstrs(
-#     (quicksum(O[i, j, h] for j in J for h in H[:r[i-1]]) == 0
-#      for i in I),
-#     name="R420xxX69"
-# )
-
 m.addConstrs(
     (Z[j, h] == C[j, h] - quicksum(O[i, j, h] for i in I)
      for j in J
