@@ -3,11 +3,11 @@ from gurobipy import Model, GRB, quicksum
 import numpy as np
 from typing import List
 
-rng = np.random.default_rng(69699)
+rng = np.random.default_rng(6547)
 
 m = Model()
 
-PACIENTES_TOTAL = 2
+PACIENTES_TOTAL = 5
 PACIENTES_UCI_TOTAL = 0
 CAMAS_TOTAL = 1
 CAMAS_UCI_TOTAL = 0
@@ -167,8 +167,8 @@ m.addConstrs(
 
 m.addConstrs(
     (
-        quicksum(A[i, j, k, h_] for h_ in range(1, h) for k in K) <=
-        quicksum(X[i, j, h_] for h_ in range(1, h))
+        quicksum(A[i, j, k, h_] for h_ in range(1, h+1) for k in K) <=
+        quicksum(X[i, j, h_] for h_ in range(1, h+1))
         for i in I
         for j in J
         for h in H),
@@ -281,10 +281,10 @@ m.addConstrs(
 
 m.addConstrs(
     (
-        1 - C[j, h + 1] >=
+        1 - C[j, h] >=
         quicksum(B[i, j, h_p] for i in I for h_p in range(1, h + 1)) -
         quicksum(S[m, j, h_p] for m in M for h_p in range(1, h + 1))
-        for h in H[:-1]
+        for h in H
         for j in J
     ),
     name="R23 Construcción de C - La cama j no esta sanitizada si se ha dejado de ocupar más veces que la cantidad de sanitizaciones realizadas"
@@ -299,25 +299,33 @@ m.addConstrs(
         for j in J
         for h in H
     ),
-    name="R25 - En todo momento la diferencia entre asignaciones y retiros de una cama debe ser de a los más 1"
+    name="R24 - En todo momento la diferencia entre asignaciones y retiros de una cama debe ser de a los más 1"
 )
 
 m.addConstrs(
-    (quicksum(B[i, j, h] for j in J) == 0
-     for i in I
-     for h in H[:t[i]]
+    (quicksum(A[i, j, k, h] for k in K for i in I) <= 1
+     for h in H
+     for j in J
      ),
-    name="xxx"
+    name="R25 - Para toda cama solo se permite máximo una instalación por hora"
 )
 
-m.addConstrs(
-    (
-        quicksum(A[i, j, k, h] for k in K) >= B[i, j, h]
-        for i in I
-        for j in J
-        for h in H),
-    name="R26 - Si se desocupa una cama debió estar instalado previamente"
-)
+# m.addConstrs(
+#     (quicksum(B[i, j, h] for j in J) == 0
+#      for i in I
+#      for h in H[:t[i]]
+#      ),
+#     name="xxx"
+# )
+
+# m.addConstrs(
+#     (
+#         quicksum(A[i, j, k, h] for k in K) >= B[i, j, h]
+#         for i in I
+#         for j in J
+#         for h in H),
+#     name="R26 - Si se desocupa una cama debió estar instalado previamente"
+# )
 
 # m.addConstrs(
 #     (quicksum(
@@ -327,14 +335,6 @@ m.addConstrs(
 #     name="R21 - Paciente ocupa máximo una cama durante su estadia"
 # )
 
-
-# m.addConstrs(
-#     (quicksum(A[i, j, k, h] for k in K for i in I) <= 1
-#      for h in H
-#      for j in J
-#      ),
-#     name="xxx"
-# )
 
 # m.addConstrs(
 #     (
