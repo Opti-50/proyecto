@@ -7,14 +7,14 @@ rng = np.random.default_rng(6547)
 
 m = Model()
 
-PACIENTES_TOTAL = 5
-PACIENTES_UCI_TOTAL = 0
-CAMAS_TOTAL = 1
+PACIENTES_TOTAL = 10
+PACIENTES_UCI_TOTAL = 5
+CAMAS_TOTAL = 2
 CAMAS_UCI_TOTAL = 0
 HORAS_TOTAL = 100
 PERSONAL_TOTAL = 5
-MEDICO_TOTAL = 2
-TIEMPO_CAMA_PROMEDIO = 5
+MEDICO_TOTAL = 5
+TIEMPO_CAMA_PROMEDIO = 8
 DESVIACION_CAMA_PROMEDIO = 2
 HORAS_TRABAJO_PERSONAL_MIN = 7
 HORAS_TRABAJO_PERSONAL_MAX = 9
@@ -48,30 +48,30 @@ r = rng.integers(low=1, high=HORAS_TOTAL, size=PACIENTES_TOTAL+1)
 t = np.rint(rng.normal(TIEMPO_CAMA_PROMEDIO,
                        DESVIACION_CAMA_PROMEDIO, PACIENTES_TOTAL+1)).astype(int)
 
-# f = [
-#     generate_shift_times(
-#         HORAS_TOTAL,
-#         rng.integers(
-#             HORAS_TRABAJO_MEDICO_MIN,
-#             HORAS_TRABAJO_MEDICO_MAX,
-#         )
-#     )
-#     for _ in range(MEDICO_TOTAL+1)
-# ]
+f = [
+    generate_shift_times(
+        HORAS_TOTAL,
+        rng.integers(
+            HORAS_TRABAJO_MEDICO_MIN,
+            HORAS_TRABAJO_MEDICO_MAX,
+        )
+    )
+    for _ in range(MEDICO_TOTAL+1)
+]
 # FULL DISPONIBILIDAD DEL PERSONAL MEDICO
-f = np.ones((MEDICO_TOTAL+1, HORAS_TOTAL+1)).tolist()
-# q = [
-#     generate_sift_times(
-#         HORAS_TOTAL,
-#         rng.integers(
-#             HORAS_TRABAJO_PERSONAL_MIN,
-#             HORAS_TRABAJO_PERSONAL_MAX
-#         )
-#     )
-#     for _ in range(PERSONAL_TOTAL+1)
-# ]
+# f = np.ones((MEDICO_TOTAL+1, HORAS_TOTAL+1)).tolist()
+q = [
+    generate_shift_times(
+        HORAS_TOTAL,
+        rng.integers(
+            HORAS_TRABAJO_PERSONAL_MIN,
+            HORAS_TRABAJO_PERSONAL_MAX
+        )
+    )
+    for _ in range(PERSONAL_TOTAL+1)
+]
 # FULL DISPONIBILIDAD DEL PERSONAL MEDICO
-q = np.ones((PERSONAL_TOTAL+1, HORAS_TOTAL+1)).tolist()
+# q = np.ones((PERSONAL_TOTAL+1, HORAS_TOTAL+1)).tolist()
 
 sys.stdout = open('output.txt', 'w+', encoding='utf-8')
 print('\nCONJUNTOS')
@@ -131,7 +131,7 @@ m.addConstrs(
 )
 
 m.addConstrs(
-    (O[i, j, h] == quicksum(A[i, j, k, h_] for h_ in range(h - t[i], h) for k in K)
+    (O[i, j, h] <= quicksum(A[i, j, k, h_] for h_ in range(h - t[i], h) for k in K)
      for i in I
      for j in J
      for h in H[t[i]+1:]),
