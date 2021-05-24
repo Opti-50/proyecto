@@ -7,19 +7,21 @@ rng = np.random.default_rng(6547)
 
 m = Model()
 
-PACIENTES_TOTAL = 10
-PACIENTES_UCI_TOTAL = 5
-CAMAS_TOTAL = 2
-CAMAS_UCI_TOTAL = 0
-HORAS_TOTAL = 100
-PERSONAL_TOTAL = 5
-MEDICO_TOTAL = 5
-TIEMPO_CAMA_PROMEDIO = 8
-DESVIACION_CAMA_PROMEDIO = 2
-HORAS_TRABAJO_PERSONAL_MIN = 7
-HORAS_TRABAJO_PERSONAL_MAX = 9
-HORAS_TRABAJO_MEDICO_MIN = 7
-HORAS_TRABAJO_MEDICO_MAX = 9
+PACIENTES_TOTAL = 50
+PACIENTES_UCI_TOTAL = 35
+CAMAS_TOTAL = 30
+CAMAS_UCI_TOTAL = 10
+HORAS_TOTAL = 3 * 21
+PERSONAL_TOTAL = 10
+MEDICO_TOTAL = 10
+TIEMPO_CAMA_PROMEDIO = 3 * 12
+DESVIACION_CAMA_PROMEDIO = 3 * 2
+HORAS_TRABAJO_PERSONAL_MIN = 1
+HORAS_TRABAJO_PERSONAL_MAX = 1
+HORAS_TRABAJO_MEDICO_MIN = 1
+HORAS_TRABAJO_MEDICO_MAX = 1
+MAX_CAMAS_SANITIZACION_TRAMO = 8
+MAX_PACIENTES_INSTALACION_TRAMO = 12
 
 I = [i for i in range(1, PACIENTES_TOTAL+1)]
 IStar = rng.choice(I, size=PACIENTES_UCI_TOTAL, replace=False)
@@ -31,11 +33,11 @@ M = [i for i in range(1, PERSONAL_TOTAL+1)]
 
 
 def generate_shift_times_continuum(max_hours: int, work_hours: int) -> List[int]:
-    return [1 if i % 24 < work_hours else 0 for i in range(0, max_hours+1)]
+    return [1 if i % 3 < work_hours else 0 for i in range(0, max_hours+1)]
 
 
 def generate_shift_times(max_hours: int, work_hours: int) -> List[int]:
-    shift_starting_hour = rng.integers(0, 24)
+    shift_starting_hour = rng.integers(0, 3)
     shift_list = [0] * shift_starting_hour
     shift_list += generate_shift_times_continuum(
         max_hours-shift_starting_hour,
@@ -51,10 +53,7 @@ t = np.rint(rng.normal(TIEMPO_CAMA_PROMEDIO,
 f = [
     generate_shift_times(
         HORAS_TOTAL,
-        rng.integers(
-            HORAS_TRABAJO_MEDICO_MIN,
-            HORAS_TRABAJO_MEDICO_MAX,
-        )
+        1
     )
     for _ in range(MEDICO_TOTAL+1)
 ]
@@ -63,10 +62,7 @@ f = [
 q = [
     generate_shift_times(
         HORAS_TOTAL,
-        rng.integers(
-            HORAS_TRABAJO_PERSONAL_MIN,
-            HORAS_TRABAJO_PERSONAL_MAX
-        )
+        1
     )
     for _ in range(PERSONAL_TOTAL+1)
 ]
@@ -139,7 +135,7 @@ m.addConstrs(
 )
 
 m.addConstrs(
-    (q[m][h] >= quicksum(S[m, j, h] for j in J)
+    (q[m][h] * MAX_CAMAS_SANITIZACION_TRAMO >= quicksum(S[m, j, h] for j in J)
      for m in M
      for h in H),
     name="R5 - Personal de Aseo debe estar disponible para ser capaz de sanitizar"
@@ -185,7 +181,7 @@ m.addConstrs(
 # )
 
 m.addConstrs(
-    (quicksum(A[i, j, k, h] for j in J for i in I) <= 1
+    (quicksum(A[i, j, k, h] for j in J for i in I) <= MAX_PACIENTES_INSTALACION_TRAMO
      for k in K
      for h in H),
     name="R10 - Doctor solo puede instalar máximo a un paciente por hora"
@@ -269,6 +265,8 @@ m.addConstrs(
     name="R21 - Si el paciente deja la cama en una hora h, debió ser instalado en ti horas anteriores"
 )
 
+
+
 m.addConstrs(
     (
         quicksum(S[m, j, h_] for h_ in range(1, h+1) for m in M) <=
@@ -308,6 +306,14 @@ m.addConstrs(
      for j in J
      ),
     name="R25 - Para toda cama solo se permite máximo una instalación por hora"
+)
+
+m.addConstrs(
+    (quicksum(A[i, j, k, h_] for k in K for h_ in range(1, h+1)) >= quicksum(B[i, j, h_] for h_ in range(1, h+1))
+     for j in J
+     for i in I
+     for h in H),
+    name="R26 - El paciente no puede desocupar la cama antes de ser instalado"
 )
 
 # m.addConstrs(
