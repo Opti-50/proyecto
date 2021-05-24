@@ -2,72 +2,10 @@ import sys
 from gurobipy import Model, GRB, quicksum
 import numpy as np
 from typing import List
+from datos import *
 
-rng = np.random.default_rng(6547)
 
 m = Model()
-
-PACIENTES_TOTAL = 50
-PACIENTES_UCI_TOTAL = 35
-CAMAS_TOTAL = 30
-CAMAS_UCI_TOTAL = 10
-HORAS_TOTAL = 3 * 21
-PERSONAL_TOTAL = 10
-MEDICO_TOTAL = 10
-TIEMPO_CAMA_PROMEDIO = 3 * 12
-DESVIACION_CAMA_PROMEDIO = 3 * 2
-HORAS_TRABAJO_PERSONAL_MIN = 1
-HORAS_TRABAJO_PERSONAL_MAX = 1
-HORAS_TRABAJO_MEDICO_MIN = 1
-HORAS_TRABAJO_MEDICO_MAX = 1
-MAX_CAMAS_SANITIZACION_TRAMO = 8
-MAX_PACIENTES_INSTALACION_TRAMO = 12
-
-I = [i for i in range(1, PACIENTES_TOTAL+1)]
-IStar = rng.choice(I, size=PACIENTES_UCI_TOTAL, replace=False)
-J = [i for i in range(1, CAMAS_TOTAL+1)]
-JStar = rng.choice(J, size=CAMAS_UCI_TOTAL, replace=False)
-H = [i for i in range(1, HORAS_TOTAL+1)]
-K = [i for i in range(1, MEDICO_TOTAL+1)]
-M = [i for i in range(1, PERSONAL_TOTAL+1)]
-
-
-def generate_shift_times_continuum(max_hours: int, work_hours: int) -> List[int]:
-    return [1 if i % 3 < work_hours else 0 for i in range(0, max_hours+1)]
-
-
-def generate_shift_times(max_hours: int, work_hours: int) -> List[int]:
-    shift_starting_hour = rng.integers(0, 3)
-    shift_list = [0] * shift_starting_hour
-    shift_list += generate_shift_times_continuum(
-        max_hours-shift_starting_hour,
-        work_hours,
-    )
-    return shift_list
-
-
-r = rng.integers(low=1, high=HORAS_TOTAL, size=PACIENTES_TOTAL+1)
-t = np.rint(rng.normal(TIEMPO_CAMA_PROMEDIO,
-                       DESVIACION_CAMA_PROMEDIO, PACIENTES_TOTAL+1)).astype(int)
-
-f = [
-    generate_shift_times(
-        HORAS_TOTAL,
-        1
-    )
-    for _ in range(MEDICO_TOTAL+1)
-]
-# FULL DISPONIBILIDAD DEL PERSONAL MEDICO
-# f = np.ones((MEDICO_TOTAL+1, HORAS_TOTAL+1)).tolist()
-q = [
-    generate_shift_times(
-        HORAS_TOTAL,
-        1
-    )
-    for _ in range(PERSONAL_TOTAL+1)
-]
-# FULL DISPONIBILIDAD DEL PERSONAL MEDICO
-# q = np.ones((PERSONAL_TOTAL+1, HORAS_TOTAL+1)).tolist()
 
 sys.stdout = open('output.txt', 'w+', encoding='utf-8')
 print('\nCONJUNTOS')
@@ -171,15 +109,6 @@ m.addConstrs(
     name="R9 - No se puede instalar paciente a cama si no fue previamente asignado"
 )
 
-# m.addConstrs(
-#     (
-#         quicksum(A[i, j, k, h] for k in K for h in range(1, H[-1]))
-#         <= X[i, j, H[-1]]
-#         for i in I
-#         for j in J),
-#     name="R9B"
-# )
-
 m.addConstrs(
     (quicksum(A[i, j, k, h] for j in J for i in I) <= MAX_PACIENTES_INSTALACION_TRAMO
      for k in K
@@ -266,7 +195,6 @@ m.addConstrs(
 )
 
 
-
 m.addConstrs(
     (
         quicksum(S[m, j, h_] for h_ in range(1, h+1) for m in M) <=
@@ -315,82 +243,6 @@ m.addConstrs(
      for h in H),
     name="R26 - El paciente no puede desocupar la cama antes de ser instalado"
 )
-
-# m.addConstrs(
-#     (quicksum(B[i, j, h] for j in J) == 0
-#      for i in I
-#      for h in H[:t[i]]
-#      ),
-#     name="xxx"
-# )
-
-# m.addConstrs(
-#     (
-#         quicksum(A[i, j, k, h] for k in K) >= B[i, j, h]
-#         for i in I
-#         for j in J
-#         for h in H),
-#     name="R26 - Si se desocupa una cama debió estar instalado previamente"
-# )
-
-# m.addConstrs(
-#     (quicksum(
-#         O[i, j, h_] for j in J for h_ in range(1, h+1)) <= 1
-#      for h in H
-#      for i in I),
-#     name="R21 - Paciente ocupa máximo una cama durante su estadia"
-# )
-
-
-# m.addConstrs(
-#     (
-#         t[i-1] * quicksum(A[i, j, k, h_p] for h_p in range(1, h + 1) for k in K) >=
-#         quicksum(O[i, j, h_p] for h_p in range(1, h + 1))
-#         for i in I
-#         for j in J
-#         for h in H[0: -1]),
-#     name="xXxPussy69xXxNo-ocupar-una-cama-sin-instalar"
-# )
-
-
-# # m.addConstrs(
-# #     (
-# #         (quicksum(O[i, j, h_p]
-# #          for h_p in range(1, h+1)) / t[i-1]) >= B[i, j, h]
-# #         for i in I
-# #         for j in J
-# #         for h in H[0: -1]),
-# #     name="No desocupar si no fue ocupado"
-# # )
-
-# # m.addConstrs(
-# #     (
-# #         (quicksum(O[i, j, h_p]
-# #                   for h_p in range(H[-1] - t[i-1], H[-1]+1)
-# #                   ) / t[i-1])
-# #         >= B[i, j, H[-1]]
-# #         for i in I
-# #         for j in J),
-# #     name="No desocupar si no fue ocupado"
-# # )
-
-
-# # m.addConstrs(
-# #     (
-# #         quicksum(O[i, j, h_p] for h_p in range(1, h+1)) >= B[i, j, h]
-# #         for i in I
-# #         for j in J
-# #         for h in H[0: -1]),
-# #     name="No desocupar si no fue ocupado"
-# # )
-
-# # m.addConstrs(
-# #     (
-# #         quicksum(O[i, j, h_p] for h_p in range()) >= B[i, j, h]
-# #         for i in I
-# #         for j in J),
-# #     name="No desocupar si no fue ocupado"
-# # )
 
 m.optimize()
 

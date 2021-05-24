@@ -42,7 +42,7 @@ def generate_shift_times(max_hours: int, work_hours: int) -> List[int]:
     return shift_list
 
 
-# Parametr
+# Parametros
 r = rng.integers(low=1, high=HORAS_TOTAL, size=PACIENTES_TOTAL+1)
 t = np.rint(rng.normal(TIEMPO_CAMA_PROMEDIO,
                        DESVIACION_CAMA_PROMEDIO, PACIENTES_TOTAL+1)).astype(int)
