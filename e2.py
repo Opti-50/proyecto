@@ -7,7 +7,7 @@ from datos import *
 
 m = Model()
 
-sys.stdout = open('output.txt', 'w+', encoding='utf-8')
+sys.stdout = open('output-slack.txt', 'w+', encoding='utf-8')
 print('\nCONJUNTOS')
 print(f'\tPacientes: {I}')
 print(f'\tPacientes UCI: {IStar}')
@@ -26,7 +26,7 @@ print('----------------------------\n')
 sys.stdout = sys.__stdout__
 
 
-Q = m.addVar(vtype=GRB.INTEGER, lb=0, name="Q")
+# Q = m.addVar(vtype=GRB.INTEGER, lb=0, name="Q")
 X = m.addVars(I, J, H, vtype=GRB.BINARY, name="X")
 A = m.addVars(I, J, K, H, vtype=GRB.BINARY, name="A")
 O = m.addVars(I, J, H, vtype=GRB.BINARY, name="O")
@@ -37,15 +37,20 @@ B = m.addVars(I, J, H, vtype=GRB.BINARY, name="B")
 
 
 m.update()
-m.setObjective(Q, GRB.MAXIMIZE)
-
-m.addConstr(Q == quicksum(A[i, j, k, h]
+m.setObjective(quicksum(A[i, j, k, h]
                           for i in I
                           for j in J
                           for k in K
                           for h in H
-                          ),
-            name="R1 - Construcción Variable Q")
+                          ), GRB.MAXIMIZE)
+
+# m.addConstr(Q == quicksum(A[i, j, k, h]
+#                           for i in I
+#                           for j in J
+#                           for k in K
+#                           for h in H
+#                           ),
+#             name="R1 - Construcción Variable Q")
 
 m.addConstrs(
     (quicksum(
@@ -246,10 +251,14 @@ m.addConstrs(
 
 m.optimize()
 
-sys.stdout = open('output.txt', 'a', encoding='utf-8')
+sys.stdout = open('output-slack.txt', 'a', encoding='utf-8')
 try:
     print('SOLUCIÓN')
     m.printAttr("X")
+
+    # for c in m.getConstrs():
+    #     print('%s : %g' % (c.constrName, c.slack))
+
 except Exception as e:
     m.computeIIS()
 sys.stdout = sys.__stdout__
